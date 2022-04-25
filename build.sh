@@ -62,13 +62,13 @@ function build_all(){
 
 
 function build_uboot(){
-    echo "============================================"
+    echo "=================start build uboot===================="
     echo "Start get U-Boot"
     get_toolchain
     check_output_dir
     
     if ! [ -d ./u-boot ]; then
-		echo "============================================"
+	echo "===============update uboot source code===================="
     	echo "Update submodule"
     	git submodule init
     	git submodule update
@@ -76,11 +76,12 @@ function build_uboot(){
     
     cd u-boot
     echo "============================================"
-    echo "Start build U-Boot ${UBOOT_VERSION}"
-    git checkout ${UBOOT_VERSION} -b ${UBOOT_VERSION}
+    //echo "Start build U-Boot ${UBOOT_VERSION}"
+    //git checkout ${UBOOT_VERSION} -b ${UBOOT_VERSION}
+    echo "===========Start  build u-boot =============="
     make ARCH=arm CROSS_COMPILE=${CC} distclean
 	make ARCH=arm CROSS_COMPILE=${CC} stm32mp15_basic_defconfig
-	make ARCH=arm CROSS_COMPILE=${CC} DEVICE_TREE=stm32mp157c-dk2 all -j8
+	make ARCH=arm CROSS_COMPILE=${CC} DEVICE_TREE=stm32mp157c-100ask-512d-v1 all -j8
 	
 	echo "============================================"
 	if [ -f u-boot.img ]; then
