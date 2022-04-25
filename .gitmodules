@@ -4,3 +4,9 @@
 [submodule "armv7-lpae-multiplatform"]
 	path = armv7-lpae-multiplatform
 	url = https://github.com/RobertCNelson/armv7-lpae-multiplatform
+[submodule "arm-trusted-firmware"]
+	path = arm-trusted-firmware
+	url = https://github.com/DongshanPI/dongshanpiseven-tfa.git
+[submodule "kernel-5.4"]
+	path = kernel-5.4
+	url = https://github.com/DongshanPI/dongshanpiseven-kernel.git

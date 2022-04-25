@@ -62,13 +62,13 @@ function build_all(){
 
 
 function build_uboot(){
-    echo "=================start build uboot===================="
+    echo "============================================"
     echo "Start get U-Boot"
     get_toolchain
     check_output_dir
     
     if ! [ -d ./u-boot ]; then
-	echo "===============update uboot source code===================="
+		echo "============================================"
     	echo "Update submodule"
     	git submodule init
     	git submodule update
@@ -76,9 +76,10 @@ function build_uboot(){
     
     cd u-boot
     echo "============================================"
-    //echo "Start build U-Boot ${UBOOT_VERSION}"
-    //git checkout ${UBOOT_VERSION} -b ${UBOOT_VERSION}
-    echo "===========Start  build u-boot =============="
+    #echo "Start build U-Boot ${UBOOT_VERSION}"
+    #git checkout ${UBOOT_VERSION} -b ${UBOOT_VERSION}
+    git checkout stm32mp-ya15xc
+    echo "============Start  build u-boot ================="
     make ARCH=arm CROSS_COMPILE=${CC} distclean
 	make ARCH=arm CROSS_COMPILE=${CC} stm32mp15_basic_defconfig
 	make ARCH=arm CROSS_COMPILE=${CC} DEVICE_TREE=stm32mp157c-100ask-512d-v1 all -j8
@@ -116,7 +117,8 @@ function build_kernel(){
     cd armv7-lpae-multiplatform
     
     echo "Get Kernel version '${KERNEL_VERSION}'"
-    git reet --hard
+    #git reset --hard
+
     git checkout ${KERNEL_VERSION}
     echo "Start build Kernel ${KERNEL_VERSION}"
     (exec "$BUILD_KERNEL")
@@ -322,6 +324,11 @@ function copy_all_configs_and_modules(){
     sudo tar xf ./armv7-lpae-multiplatform/deploy/${kernel_ver}-dtbs.tar.gz -C ${MOUNT_PATH}/boot/dtbs/${kernel_ver}/
     check
 
+    echo "================================"
+    echo "Copy 100ASK Kernel Device Tree Binaries"
+    sudo cp -rfdv ./kernel/stm32mp157c-100ask-512d-v1* ${MOUNT_PATH}/boot/dtbs/${kernel_ver}/
+
+
     echo ""
     echo "Copy Kernel Modules"
     sudo tar xfv ./armv7-lpae-multiplatform/deploy/${kernel_ver}-modules.tar.gz -C ${MOUNT_PATH}
@@ -497,10 +504,13 @@ function open_qemu(){
     #sudo rm ${MOUNT_PATH}/etc/resolv.conf
     #sudo touch ${MOUNT_PATH}/etc/resolv.conf
     #sudo sh -c echo "nameserver 8.8.8.8" > ${MOUNT_PATH}/etc/resolv.conf
+
+    echo "==================ch-mount.sh -m ==================================="
     (exec ./ch-mount.sh -m ${MOUNT_PATH} )
+
+    echo "======================./ch-mount.sh -u==============================="
     echo "Clean up"
     (exec ./ch-mount.sh -u ${MOUNT_PATH} )
-
     sync
     calenup
 
