@@ -2,6 +2,13 @@
 
 export LC_ALL=C
 
+Red='\033[0;31m'          # Red
+Green='\033[0;32m'        # Green
+Yellow='\033[0;33m'       # Yellow
+Blue='\033[0;34m'         # Blue
+White='\033[0;37m'        # White
+NC="\033[0m"
+
 # TODO: need to make config file for configure build versions
 UBOOT_VERSION="v2021.10"
 KERNEL_VERSION="5.15.6-armv7-lpae-x11"
@@ -60,13 +67,28 @@ function build_all(){
     build_uboot
 }
 
-
-function build_uboot(){
-    echo "============================================"
-    echo "Start get U-Boot"
+function build_tfa(){
+    echo -e "${Green}============================================${NC}"
     get_toolchain
     check_output_dir
-    
+    echo "Start get atf"
+    if ! [ -d ./arm-trusted-firmware ]; then
+    	echo "Update submodule"
+    	git submodule init
+    	git submodule update
+    fi
+    cd arm-trusted-firmware/
+    make  CROSS_COMPILE=${CC} -f $PWD/./Makefile.sdk all
+    cd ..
+    cp -rvd ./build/trusted/tf-a-stm32mp157c-100ask-512d-v1.stm32  ./output/
+    #check
+}
+
+function build_uboot(){
+    echo -e "${Green}============================================${NC}"
+    get_toolchain
+    check_output_dir    
+    echo "Start get U-Boot"
     if ! [ -d ./u-boot ]; then
 		echo "============================================"
     	echo "Update submodule"
@@ -81,19 +103,16 @@ function build_uboot(){
     git checkout stm32mp-ya15xc
     echo "============Start  build u-boot ================="
     make ARCH=arm CROSS_COMPILE=${CC} distclean
-	make ARCH=arm CROSS_COMPILE=${CC} stm32mp15_basic_defconfig
+	make ARCH=arm CROSS_COMPILE=${CC} stm32mp15_trusted_defconfig
 	make ARCH=arm CROSS_COMPILE=${CC} DEVICE_TREE=stm32mp157c-100ask-512d-v1 all -j8
 	
 	echo "============================================"
-	if [ -f u-boot.img ]; then
+	if [ -f u-boot.stm32 ]; then
 	echo "U-Boot Build Finish"
 	
 	echo "Copy file to output folder ${CUR_PATH}/output"
-	if [ -f ../output/u-boot-spl.stm32 ]; then rm ../output/u-boot-spl.stm32; fi
-	if [ -f ../output/u-boot.img ]; then rm ../output/u-boot.img; fi
-	
-	cp u-boot-spl.stm32 ../output
-	cp u-boot.img ../output
+	if [ -f ../output/u-boot.stm32 ]; then rm ../output/u-boot.stm32; fi
+	cp u-boot.stm32 ../output
 	else
 	echo "U-Boot Build Failed"
 	fi
@@ -103,27 +122,56 @@ function build_uboot(){
 
 
 function build_kernel(){
-    BUILD_KERNEL="./build_kernel.sh"
-    	
-    if ! [ -d ./armv7-lpae-multiplatform ]; then
+    get_toolchain
+    check_output_dir
+    if ! [ -d ./kernel-5.4 ]; then
 		echo "============================================"
     	echo "Init submodule Kernel source"
     	git submodule init
     	git submodule update
     fi
-    
-    echo "============================================"
-    echo "Start build Kernel"
-    cd armv7-lpae-multiplatform
-    
-    echo "Get Kernel version '${KERNEL_VERSION}'"
-    #git reset --hard
 
-    git checkout ${KERNEL_VERSION}
-    echo "Start build Kernel ${KERNEL_VERSION}"
-    (exec "$BUILD_KERNEL")
+    echo "============================================"
+    cd kernel-5.4
+    echo "cd kernel path: `pwd` "
+    git checkout master
+    echo -e "${Yellow}Start build Kernel...${NC}"
+    #make ARCH=arm CROSS_COMPILE=${CC} distclean
+
+    echo -e "${Yellow}Start  defconfig....${NC}"
+    make ARCH=arm CROSS_COMPILE=${CC} 100ask_stm32mp157_pro_defconfig
+    check
+    echo -e "${Yellow}Start build kernel image...${NC}"
+    make ARCH=arm CROSS_COMPILE=${CC}  uImage LOADADDR=0xC2000040  -j8
+    check
+
+    echo -e "${Yellow}Start build dtb...${NC}"
+    make ARCH=arm CROSS_COMPILE=${CC}  dtbs
+    check
+    echo "Start build modules..."
+    make ARCH=arm CROSS_COMPILE=${CC}   modules -j8
+    check
+    if [ -d module/ ]; then rm -rf tmp/; fi
+    mkdir module
+    make  ARCH=arm INSTALL_MOD_PATH=$(pwd)/module/ INSTALL_MOD_STRIP=1  modules_install
+    cd  module/
+    tar -czvf modules.tar.gz lib/
     cd ..
-    
+    check
+
+    echo "============================================"
+	if [ -f arch/arm/boot/uImage ]; then
+	echo -e "${Green}kernel image Build Finish${NC}"
+    cp arch/arm/boot/uImage ../output
+	cp arch/arm/boot/dts/stm32mp157c-100ask-512d-v1.dtb ../output
+    cp arch/arm/boot/dts/stm32mp157c-100ask-512d-lcd-v1.dtb ../output
+    cp arch/arm/boot/dts/stm32mp157c-100ask-512d-hdmi-v1.dtb ../output
+    cp module/modules.tar.gz    ../output
+    check
+	else
+	echo -e  "${Red}Build kernel Failed.${NC}"
+	fi
+    cd ..
 }
 
 function build_modules(){
@@ -139,22 +187,22 @@ function get_toolchain(){
 	mkdir toolchain
 	fi
 	
-	if ! [ -d ./toolchain/gcc-linaro-6.5.0-2018.12-x86_64_arm-linux-gnueabihf ]; then
+	if ! [ -d ./toolchain/gcc-arm-8.3-2019.03-x86_64-arm-linux-gnueabihf ]; then
 	
 		if ! [ -n "$(command -v wget)" ]; then
 		echo "WGET not found"
 		apt get install wget-y
 		fi
 	
-		if ! [ -f ./download_dir/gcc-linaro-6.5.0-2018.12-x86_64_arm-linux-gnueabihf.tar.xz ]; then
+		if ! [ -f ./download_dir/gcc-arm-8.3-2019.03-x86_64-arm-linux-gnueabihf.tar.xz ]; then
 		check_download_dir
-		wget -P ./download_dir https://releases.linaro.org/components/toolchain/binaries/6.5-2018.12/arm-linux-gnueabihf/gcc-linaro-6.5.0-2018.12-x86_64_arm-linux-gnueabihf.tar.xz
-		tar xvf ./download_dir/gcc-linaro-6.5.0-2018.12-x86_64_arm-linux-gnueabihf.tar.xz -C ./toolchain
+		wget -P ./download_dir https://developer.arm.com/-/media/Files/downloads/gnu-a/8.3-2019.03/binrel/gcc-arm-8.3-2019.03-x86_64-arm-linux-gnueabihf.tar.xz
+		tar xvf ./download_dir/gcc-arm-8.3-2019.03-x86_64-arm-linux-gnueabihf.tar.xz -C ./toolchain
 		fi
 	
 	fi
 
-	export CC=`pwd`/toolchain/gcc-linaro-6.5.0-2018.12-x86_64_arm-linux-gnueabihf/bin/arm-linux-gnueabihf-
+	export CC=`pwd`/toolchain/gcc-arm-8.3-2019.03-x86_64-arm-linux-gnueabihf/bin/arm-linux-gnueabihf-
 	echo "============================================"
 	echo "Toolchain path: '${CC}'"
 	echo $(${CC}gcc --version)
@@ -271,10 +319,10 @@ function format_rootfs(){
 function install_uboot(){
     echo "============================================"
     echo "Install U-Boot bootloader version ${UBOOT_VERSION}:"
-    if [ -f ./output/u-boot.img ]; then
-        sudo dd if=./output/u-boot-spl.stm32 of=${LOOP_DEVICE}0p1
-        sudo dd if=./output/u-boot-spl.stm32 of=${LOOP_DEVICE}p2
-        sudo dd if=./output/u-boot.img of=${LOOP_DEVICE}p3
+    if [ -f ./output/u-boot.stm32 ]; then
+        sudo dd if=./output/tf-a-stm32mp157c-100ask-512d-v1.stm32 of=${LOOP_DEVICE}0p1
+        sudo dd if=./output/tf-a-stm32mp157c-100ask-512d-v1.stm32 of=${LOOP_DEVICE}p2
+        sudo dd if=./output/u-boot.stm32 of=${LOOP_DEVICE}p3
     else
         echo "First need build U-Boot, please make './build.sh uboot'"
     exit 0
@@ -289,54 +337,42 @@ function copy_kernel(){
     sudo mkdir -p ${MOUNT_PATH}
     sudo mount ${LOOP_DEVICE}p4 ${MOUNT_PATH}
     check
-
-    echo ""
-    if [ -d ./armv7-lpae-multiplatform/deploy ]; then
-    kernel_ver=$(basename ./armv7-lpae-multiplatform/deploy/*.zImage | rev | cut -c 8- | rev )
-    echo "Kernel version ${kernel_ver}"
-    else
-    echo "First need build Kernel, please make './build.sh kernel'"
-    exit 0
-    fi
-
 }
 
 
 function copy_all_configs_and_modules(){
-    echo ""
+	echo ""
     echo "Setup extlinux.conf"
     sudo mkdir -p ${MOUNT_PATH}/boot/extlinux/
-    sudo sh -c "echo 'label Linux ${kernel_ver}' > ${MOUNT_PATH}/boot/extlinux/extlinux.conf"
-    sudo sh -c "echo '    kernel /boot/vmlinuz-${kernel_ver}' >> ${MOUNT_PATH}/boot/extlinux/extlinux.conf"
-    sudo sh -c "echo '    append console=ttySTM0,115200 console=tty1,115200 fbcon=rotate:3 root=/dev/mmcblk0p4 ro rootfstype=ext4 rootwait' >> ${MOUNT_PATH}/boot/extlinux/extlinux.conf"
-    sudo sh -c "echo '    fdtdir /boot/dtbs/${kernel_ver}/' >> ${MOUNT_PATH}/boot/extlinux/extlinux.conf"
+    sudo sh -c "echo 'label Linux stm32mp157' > ${MOUNT_PATH}/boot/extlinux/extlinux.conf"
+    sudo sh -c "echo '    kernel /boot/uImage' >> ${MOUNT_PATH}/boot/extlinux/extlinux.conf"
+    sudo sh -c "echo '    fdt /boot/stm32mp157c-100ask-512d-lcd-v1.dtb' >> ${MOUNT_PATH}/boot/extlinux/extlinux.conf"
+    sudo sh -c "echo '    append console=ttySTM0,115200  root=/dev/mmcblk1p4 rw rootfstype=ext4 rootwait' >> ${MOUNT_PATH}/boot/extlinux/extlinux.conf"
+    sudo sh -c "echo '    fdtdir /boot/' >> ${MOUNT_PATH}/boot/extlinux/extlinux.conf"
     check
-
+    
     echo ""
     echo "Copy Kernel Image"
-    sudo cp -v ./armv7-lpae-multiplatform/deploy/${kernel_ver}.zImage ${MOUNT_PATH}/boot/vmlinuz-${kernel_ver}
+    sudo cp -v ./output/uImage  ${MOUNT_PATH}/boot/
     check
-
 
     echo ""
     echo "Copy Kernel Device Tree Binaries"
-    sudo mkdir -p ${MOUNT_PATH}/boot/dtbs/${kernel_ver}/
-    sudo tar xf ./armv7-lpae-multiplatform/deploy/${kernel_ver}-dtbs.tar.gz -C ${MOUNT_PATH}/boot/dtbs/${kernel_ver}/
+    sudo mkdir -p ${MOUNT_PATH}/boot/
+    sudo cp -v ./output/stm32mp157c-100ask-512d-hdmi-v1.dtb  ${MOUNT_PATH}/boot/
+    sudo cp -v ./output/stm32mp157c-100ask-512d-lcd-v1.dtb  ${MOUNT_PATH}/boot/
+    sudo cp -v ./output/stm32mp157c-100ask-512d-v1.dtb  ${MOUNT_PATH}/boot/
     check
-
-    echo "================================"
-    echo "Copy 100ASK Kernel Device Tree Binaries"
-    sudo cp -rfdv ./kernel/stm32mp157c-100ask-512d-v1* ${MOUNT_PATH}/boot/dtbs/${kernel_ver}/
 
 
     echo ""
     echo "Copy Kernel Modules"
-    sudo tar xfv ./armv7-lpae-multiplatform/deploy/${kernel_ver}-modules.tar.gz -C ${MOUNT_PATH}
+    sudo tar xfv ./output/modules.tar.gz -C ${MOUNT_PATH}
     check
+
 
     sudo sh -c "echo 'auto eth0' >> ${MOUNT_PATH}/etc/network/interfaces"
     sudo sh -c "echo 'iface eth0 inet dhcp' >> ${MOUNT_PATH}/etc/network/interfaces"
-
     echo ""
     echo "Copy WiFi firmware"
     sudo mkdir -p ${MOUNT_PATH}/lib/firmware/brcm/
@@ -354,7 +390,7 @@ function copy_all_configs_and_modules(){
     echo ""
     echo "Copy helper scripts"
     sudo cp -v ./script/resize_sd.sh ${MOUNT_PATH}/usr/bin/
-    sudo cp -v ./script/activate_wifi.sh ${MOUNT_PATH}/usr/bin/
+    #sudo cp -v ./script/activate_wifi.sh ${MOUNT_PATH}/usr/bin/
     
     echo ""
     echo "File Systems Table (/etc/fstab)"
@@ -417,31 +453,6 @@ function create_image(){
     fi
 
 
-    echo ""
-    echo "Setup extlinux.conf"
-	sudo mkdir -p ${MOUNT_PATH}/boot/extlinux/
-	sudo sh -c "echo 'label Linux ${kernel_ver}' > ${MOUNT_PATH}/boot/extlinux/extlinux.conf"
-	sudo sh -c "echo '    kernel /boot/vmlinuz-${kernel_ver}' >> ${MOUNT_PATH}/boot/extlinux/extlinux.conf"
-	sudo sh -c "echo '    append console=ttySTM0,115200 console=tty1,115200 fbcon=rotate:3 root=/dev/mmcblk0p4 ro rootfstype=ext4 rootwait' >> ${MOUNT_PATH}/boot/extlinux/extlinux.conf"
-	sudo sh -c "echo '    fdtdir /boot/dtbs/${kernel_ver}/' >> ${MOUNT_PATH}/boot/extlinux/extlinux.conf"
-	check
-
-    echo ""
-    echo "Copy Kernel Image"
-	sudo cp -v ./armv7-lpae-multiplatform/deploy/${kernel_ver}.zImage ${MOUNT_PATH}/boot/vmlinuz-${kernel_ver}
-	check
-
-
-    echo ""
-    echo "Copy Kernel Device Tree Binaries"
-	sudo mkdir -p ${MOUNT_PATH}/boot/dtbs/${kernel_ver}/
-	sudo tar xf ./armv7-lpae-multiplatform/deploy/${kernel_ver}-dtbs.tar.gz -C ${MOUNT_PATH}/boot/dtbs/${kernel_ver}/
-	check
-
-    echo ""
-    echo "Copy Kernel Modules"
-	sudo tar xfv ./armv7-lpae-multiplatform/deploy/${kernel_ver}-modules.tar.gz -C ${MOUNT_PATH}
-	check
 
 	sudo sh -c "echo 'auto eth0' >> ${MOUNT_PATH}/etc/network/interfaces"
 	sudo sh -c "echo 'iface eth0 inet dhcp' >> ${MOUNT_PATH}/etc/network/interfaces"
@@ -754,6 +765,7 @@ for option in ${OPTIONS}; do
     # echo "processing option: $option"
     case $option in
     all) build_all ;;
+    tfa) build_tfa ;;
     uboot) build_uboot ;;
     kernel) build_kernel ;;
     modules) build_modules ;;
