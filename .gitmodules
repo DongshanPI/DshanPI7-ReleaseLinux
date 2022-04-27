@@ -7,3 +7,6 @@
 [submodule "kernel-5.4"]
 	path = kernel-5.4
 	url = https://github.com/DongshanPI/dongshanpiseven-kernel.git
+[submodule "armv7-lpae-multiplatform"]
+	path = armv7-lpae-multiplatform
+	url = https://github.com/DongshanPI/armv7-lpae-multiplatform
