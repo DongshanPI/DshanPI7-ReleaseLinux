@@ -79,6 +79,7 @@ function build_tfa(){
     	git submodule update
     fi
     cd arm-trusted-firmware/
+    git checkout stm32mp-ya15xc
     make  CROSS_COMPILE=${CC} -f $PWD/./Makefile.sdk all
     cd ..
     cp -rvd ./build/trusted/tf-a-stm32mp157c-100ask-512d-v1.stm32  ./output/
