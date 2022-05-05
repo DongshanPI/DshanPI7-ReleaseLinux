@@ -6,28 +6,24 @@ jobs:
       - uses: actions/checkout@v2
         with:
           path: stm32mp1-ubuntu
-          
+
+      - name: Install depends
+        run: sudo apt-get install -y lzop lzma gettext libmpc-dev u-boot-tools libncurses5-dev pv gzip
+
       - name: Pull & update submodules recursively
         working-directory: ./stm32mp1-ubuntu
         run: |
           git submodule update --init --recursive
           git submodule update --recursive --remote   
     
-        
+      - name: build arm trust firmware
+        working-directory: ./stm32mp1-ubuntu
+        run: ls -l && bash build.sh tfa
+
       - name: build uboot
         working-directory: ./stm32mp1-ubuntu
         run: ls -l && bash build.sh uboot
-    
-      - name: Install depends
-        run: sudo apt-get install -y lzop lzma gettext libmpc-dev u-boot-tools libncurses5-dev pv gzip
-     
-      - name: copy system.sh script
-        # AUTO_BUILD=1 disable kernel menuconfig menu before build
-        working-directory: ./stm32mp1-ubuntu
-        run: |
-          cp -v system.sh.sample armv7-lpae-multiplatform/system.sh
-          echo AUTO_BUILD=1 >> armv7-lpae-multiplatform/system.sh
-          
+         
       - name: build kernel & modules
         working-directory: ./stm32mp1-ubuntu
         run: bash build.sh kernel

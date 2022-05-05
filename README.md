@@ -3,11 +3,6 @@ This repo for build and run Ubuntu on stm32mp157 <br>
 Availability
 Boards:
 
-  * [Discovery kit with STM32MP157D MPU 88 at Digi-Key](https://www.digikey.com/en/products/detail/stmicroelectronics/STM32MP157D-DK1/13536964)
-  * [Discovery kit with STM32MP157F MPU 47 at Digi-Key](https://www.digikey.com/en/products/detail/stmicroelectronics/STM32MP157F-DK2/13536968)
-  * [Evaluation board with STM32MP157D MPU 43 at Digi-Key](https://www.digikey.com/en/products/detail/stmicroelectronics/STM32MP157D-EV1/13536967)
-  * [Evaluation board with STM32MP157F MPU 32 at Digi-Key](https://www.digikey.com/en/products/detail/stmicroelectronics/STM32MP157F-EV1/12395904)
-
 ## Basic Requirements
 Running a recent supported release of Debian, Fedora or Ubuntu on a x86 64bit based PC; without OS Virtualization Software. <br>
 Many of the listed commands assume `/bin/bash` as the default shell. <br> 
@@ -34,6 +29,7 @@ For full automatic build run:
 
 For separate build, uboot, kernel and rootfs
 ```bash
+./build.sh tfa
 ./build.sh uboot
 ./build.sh kernel
 ./build.sh ubuntu
@@ -98,31 +94,6 @@ make ARCH=arm CROSS_COMPILE=${CC} distclean
 make ARCH=arm CROSS_COMPILE=${CC} stm32mp15_basic_defconfig
 make ARCH=arm CROSS_COMPILE=${CC} DEVICE_TREE=stm32mp157c-ev1 all
 ```
-
-**stm32mp157c-ed1**
-```bash
-#user@localhost:~/u-boot$
-make ARCH=arm CROSS_COMPILE=${CC} distclean
-make ARCH=arm CROSS_COMPILE=${CC} stm32mp15_basic_defconfig
-make ARCH=arm CROSS_COMPILE=${CC} DEVICE_TREE=stm32mp157c-ed1 all
-```
-
-**stm32mp157a-dk1**
-```bash
-#user@localhost:~/u-boot$
-make ARCH=arm CROSS_COMPILE=${CC} distclean
-make ARCH=arm CROSS_COMPILE=${CC} stm32mp15_basic_defconfig
-make ARCH=arm CROSS_COMPILE=${CC} DEVICE_TREE=stm32mp157a-dk1 all
-```
-
-**stm32mp157c-dk2**
-```bash
-#user@localhost:~/u-boot$
-make ARCH=arm CROSS_COMPILE=${CC} distclean
-make ARCH=arm CROSS_COMPILE=${CC} stm32mp15_basic_defconfig
-make ARCH=arm CROSS_COMPILE=${CC} DEVICE_TREE=stm32mp157c-dk2 all
-```
-
 
 ## Linux Kernel
 This script will build the kernel, modules, device tree binaries and copy them to the deploy directory.
@@ -350,19 +321,6 @@ sudo tar xfv ./armv7-lpae-multiplatform/deploy/${kernel_version}-modules.tar.gz 
 ```bash
 #user@localhost:~/$
 sudo sh -c "echo '/dev/mmcblk0p4  /  auto  errors=remount-ro  0  1' >> /mnt/rootfs/etc/fstab"
-```
-
-**For DK2 board. WiFi bin and config files**
-```bash
-#user@localhost:~/$
-wget -c https://raw.githubusercontent.com/STMicroelectronics/meta-st-stm32mp/dunfell/recipes-kernel/linux-firmware/linux-firmware/brcmfmac43430-sdio.txt 
-wget -c https://github.com/murata-wireless/cyw-fmac-fw/raw/master/cyfmac43430-sdio.bin
-wget -c https://github.com/murata-wireless/cyw-fmac-fw/raw/master/cyfmac43430-sdio.1DX.clm_blob
- 
-sudo mkdir -p /mnt/rootfs/lib/firmware/brcm/
- 
-sudo cp -v ./brcmfmac43430* /mnt/rootfs/lib/firmware/brcm/
-sudo cp -v ./brcmfmac43430-sdio.txt /mnt/rootfs/lib/firmware/brcm/brcmfmac43430-sdio.st,stm32mp157c-dk2.txt
 ```
 
 **Finish:**

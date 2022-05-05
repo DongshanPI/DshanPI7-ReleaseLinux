@@ -34,6 +34,7 @@ function usage()
 	echo "Usage: build.sh [OPTIONS]"
     echo "Available options:"
     echo "all                -build uboot, kernel, rootfs, recovery image"
+    echo "tfa                -build arm trust firmware"
     echo "uboot              -build uboot"
     echo "kernel             -build kernel"
     echo "modules            -copy kernel modules"
@@ -115,8 +116,7 @@ function build_uboot(){
 	cp u-boot.stm32 ../output
 	else
 	echo "U-Boot Build Failed"
-	fi
-	
+	fi	
 	cd ..
 }
 
