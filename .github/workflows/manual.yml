@@ -50,6 +50,8 @@ jobs:
           rm -f output/sdcard-stm32mp157.img 
           bash build.sh mkdebian11
           
+      - run: ls -la && ls ./output/*
+      
       - name: Upload Ubuntu 18
         uses: actions/upload-artifact@v2
         with:
@@ -73,4 +75,5 @@ jobs:
         with:
           name: "Download artifacts - Debian 11"
           path: ./output/debian-11*.img.gz           
-    
+          
+      - run: ls -la && ls ./output/*    
