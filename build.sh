@@ -72,12 +72,12 @@ function build_tfa(){
     echo -e "${Green}============================================${NC}"
     get_toolchain
     check_output_dir
-    echo "Start get atf"
     if ! [ -d ./arm-trusted-firmware ]; then
     	echo "Update submodule"
     	git submodule init
     	git submodule update
     fi
+    cp Makefile.sdk  arm-trusted-firmware/
     cd arm-trusted-firmware/
     git checkout stm32mp-ya15xc
     make  CROSS_COMPILE=${CC} -f $PWD/./Makefile.sdk all
@@ -202,8 +202,9 @@ function get_toolchain(){
 		fi
 	
 	fi
-
+    export PATH=$PATH:`pwd`/toolchain/gcc-arm-8.3-2019.03-x86_64-arm-linux-gnueabihf/bin/
 	export CC=`pwd`/toolchain/gcc-arm-8.3-2019.03-x86_64-arm-linux-gnueabihf/bin/arm-linux-gnueabihf-
+
 	echo "============================================"
 	echo "Toolchain path: '${CC}'"
 	echo $(${CC}gcc --version)
